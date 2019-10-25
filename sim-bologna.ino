@@ -12,14 +12,7 @@
 
 #define BUZZER_PIN 12
 #define DEBOUNCE_DELAY 50
-
-/*
- * 1. User presses a button
- * 2. Program validates input
- * 2.1 If input is correct, continue
- * 2.2 Else, ring the buzzer, go to next level
- * 3. Repeat.
- */
+#define MOTOR_TURN_TIME 250
 
 int buttonPins[BUTTON_COUNT] = {
     BUTTON_1_PIN,
@@ -67,6 +60,10 @@ void setupPins()
   pinMode(LEVEL_2_PIN, OUTPUT);
   pinMode(LEVEL_3_PIN, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
+
+  digitalWrite(LEVEL_1_PIN, HIGH);
+  digitalWrite(LEVEL_2_PIN, HIGH);
+  digitalWrite(LEVEL_3_PIN, HIGH);
 
   for (int i = 0; i < 6; i++)
   {
@@ -118,7 +115,29 @@ void buzz(int t = 1000)
 {
   tone(BUZZER_PIN, 500);
   delay(t);
-  noTone(BUZZER_PIN);   
+  noTone(BUZZER_PIN);
+}
+
+void dropKralen(int level)
+{
+  int enginePin;
+  switch (level)
+  {
+  case 0:
+    enginePin = LEVEL_1_PIN;
+    break;
+  case 1:
+    enginePin = LEVEL_2_PIN;
+    break;
+  case 2:
+    enginePin = LEVEL_3_PIN;
+    break;
+  }
+
+  Serial.println("Dropping the kralen");
+  digitalWrite(enginePin, LOW);
+  delay(MOTOR_TURN_TIME);
+  digitalWrite(enginePin, HIGH);
 }
 
 void loop()
@@ -143,6 +162,8 @@ void loop()
       {
         continue;
       }
+
+      dropKralen(currentLevel);
 
       // Go to next level and reset steps also start motor to drop the kralen
       nextLevel();
