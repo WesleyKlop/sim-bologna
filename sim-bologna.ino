@@ -116,9 +116,9 @@ void nextLevel()
 
 void buzz(int t = 1000)
 {
-  digitalWrite(BUZZER_PIN, HIGH);
+  tone(BUZZER_PIN, 500);
   delay(t);
-  digitalWrite(BUZZER_PIN, LOW);
+  noTone(BUZZER_PIN);   
 }
 
 void loop()
@@ -157,8 +157,7 @@ void loop()
     {
       Serial.println("  Which was wrong!");
       // Wrong!
-      // TODO: Ring buzzer;
-      buzz();
+      buzz(200);
       nextLevel();
     }
   }
