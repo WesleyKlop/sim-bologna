@@ -4,6 +4,14 @@
 #define BUTTON_4_PIN 5
 #define BUTTON_5_PIN 6
 #define BUTTON_6_PIN 7
+#define BUTTON_COUNT 6
+
+#define LEVEL_1_PIN 9
+#define LEVEL_2_PIN 10
+#define LEVEL_3_PIN 11
+
+#define BUZZER_PIN 12
+#define DEBOUNCE_DELAY 50
 
 /*
  * 1. User presses a button
@@ -13,34 +21,7 @@
  * 3. Repeat.
  */
 
-class Level
-{
-private:
-  int buttons[6];
-  int currentMove;
-
-public:
-  Level(int levelLayout[]);
-  bool isFinished();
-  bool doMove(int button);
-};
-
-Level::Level(int levelLayout[]) : buttons(levelLayout)
-{
-  buttons = levelLayout;
-}
-
-bool Level::isFinished()
-{
-  return currentMove == 5;
-}
-
-bool Level::doMove(int button)
-{
-  return buttons[currentMove] == button;
-}
-
-int buttonPins[6] = {
+int buttonPins[BUTTON_COUNT] = {
     BUTTON_1_PIN,
     BUTTON_2_PIN,
     BUTTON_3_PIN,
@@ -48,50 +29,137 @@ int buttonPins[6] = {
     BUTTON_5_PIN,
     BUTTON_6_PIN,
 };
+/**
+ * Button state per pin. Structure is { { PREV, CURR }, ...}
+ */
+int buttonStates[BUTTON_COUNT][2] = {};
+unsigned long lastDebounceTimes[BUTTON_COUNT] = {};
 
-int levels[3][6] = {
+/**
+ * Level layout. Numbers correspond to buttons
+ */
+int levels[3][BUTTON_COUNT] = {
     {1, 4, 6, 1, 0, 0},
     {2, 5, 3, 1, 6, 0},
     {4, 5, 3, 2, 3, 1},
 };
 
-int moves[5][6] = {};
+int currentLevel = 0;
+int currentStep = 0;
 
-int currentLevel = 1;
-
-bool checkLevel(int levelToCheck)
+bool checkMove(int levelToCheck, int step, int pressedButton)
 {
-  // Step through each given number and verify that it is the correct one
-  for (int i = 0; i < 6 && levels[levelToCheck][i] != 0; i++)
-  {
-    int spot = levels[levelToCheck][i];
-  }
+  return levels[levelToCheck][step] == pressedButton;
+}
+
+/**
+ * Returns true if the current step in a level is 0
+ */
+bool isLevelFinished(int levelToCheck, int step)
+{
+  return levels[levelToCheck][step] == 0;
 }
 
 void setupPins()
 {
+  pinMode(13, OUTPUT);
+  pinMode(LEVEL_1_PIN, OUTPUT);
+  pinMode(LEVEL_2_PIN, OUTPUT);
+  pinMode(LEVEL_3_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+
   for (int i = 0; i < 6; i++)
   {
     pinMode(buttonPins[i], INPUT);
   }
 }
 
+bool checkButtonPress(int buttonIndex)
+{
+  int reading = digitalRead(buttonPins[buttonIndex]);
+  if (buttonStates[buttonIndex][0] != reading)
+  {
+    lastDebounceTimes[buttonIndex] = millis();
+  }
+
+  if ((millis() - lastDebounceTimes[buttonIndex]) > DEBOUNCE_DELAY)
+  {
+    if (reading != buttonStates[buttonIndex][1])
+    {
+      buttonStates[buttonIndex][1] = reading;
+
+      // return true when the state changed to high
+      if (reading == HIGH)
+      {
+        return true;
+      }
+    }
+  }
+
+  buttonStates[buttonIndex][0] = reading;
+  return false;
+}
+
 void setup()
 {
   Serial.begin(9600);
-  // Set output led
-  pinMode(13, OUTPUT);
 
   setupPins();
 }
 
+void nextLevel()
+{
+  Serial.println("! Going to next level");
+  currentLevel++;
+  currentStep = 0;
+}
+
+void buzz(int t = 1000)
+{
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(t);
+  digitalWrite(BUZZER_PIN, LOW);
+}
+
 void loop()
 {
-  bool on = false;
-  // Check for any button press
-  for (int i = 0; !on && i < 6; i++)
+  for (int i = 0; i < BUTTON_COUNT; i++)
   {
-    on = digitalRead(buttonPins[i]) == HIGH;
+    int button = buttonPins[i];
+    // Check if the user pressed a button this turn, if true, do a thing
+    if (!checkButtonPress(i))
+    {
+      continue;
+    }
+
+    Serial.println((String) "User pressed button " + button);
+
+    if (checkMove(currentLevel, currentStep, button))
+    {
+      Serial.println("  Which was correct!");
+      // Was correct!
+      currentStep++;
+      if (!isLevelFinished(currentLevel, currentStep))
+      {
+        continue;
+      }
+
+      // Go to next level and reset steps also start motor to drop the kralen
+      nextLevel();
+      if (currentLevel == 3)
+      {
+        Serial.println("Game finished!!");
+        // Finished!!!!!!!!
+        // Dunno what we should do :shrug:
+      }
+    }
+    else
+    {
+      Serial.println("  Which was wrong!");
+      // Wrong!
+      // TODO: Ring buzzer;
+      buzz();
+      nextLevel();
+    }
   }
-  digitalWrite(13, on ? HIGH : LOW);
 }
