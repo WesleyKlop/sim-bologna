@@ -45,12 +45,18 @@ bool checkMove(int levelToCheck, int step, int pressedButton)
   return levels[levelToCheck][step] == pressedButton;
 }
 
+void reset()
+{
+  currentLevel = 0;
+  currentStep = 0;
+}
+
 /**
  * Returns true if the current step in a level is 0
  */
 bool isLevelFinished(int levelToCheck, int step)
 {
-  return levels[levelToCheck][step] == 0;
+  return step == 6 || levels[levelToCheck][step] == 0;
 }
 
 void setupPins()
@@ -106,9 +112,9 @@ void setup()
 
 void nextLevel()
 {
-  Serial.println("! Going to next level");
   currentLevel++;
   currentStep = 0;
+  Serial.println((String) "! Arrived in next level: " + currentLevel);
 }
 
 void buzz(int t = 1000)
@@ -144,7 +150,7 @@ void loop()
 {
   for (int i = 0; i < BUTTON_COUNT; i++)
   {
-    int button = buttonPins[i];
+    int button = i + 1;
     // Check if the user pressed a button this turn, if true, do a thing
     if (!checkButtonPress(i))
     {
@@ -172,6 +178,11 @@ void loop()
         Serial.println("Game finished!!");
         // Finished!!!!!!!!
         // Dunno what we should do :shrug:
+        buzz(150);
+        delay(100);
+        buzz(150);
+        delay(100);
+        buzz(150);
       }
     }
     else
@@ -181,5 +192,10 @@ void loop()
       buzz(200);
       nextLevel();
     }
+  }
+
+  if (currentLevel == 3)
+  {
+    reset();
   }
 }
